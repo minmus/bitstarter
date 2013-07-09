@@ -26,6 +26,11 @@ var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var sys = require('util');
+var fs = require('fs');
+var rest = require('restler');
+var dumpfile = "dump.html";
+var URLFILE_DEFAULT = "http://evening-temple-6365.herokuapp.com";
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -61,11 +66,30 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
+var url2file = function(url){
+    rest.get(url).on('complete', function(result) {
+	  if (result instanceof Error) {
+	      sys.puts('Error: ' + result.message);    
+	        } else {
+		    fs.writeFileSync(dumpfile, result);
+		      }
+	});
+};
+
 if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+    .option('-u, --url <url>', 'url to html')
         .parse(process.argv);
+    if (program.url){
+	console.log("Checking URL %s", program.url);
+	url2file(program.url);
+	program.file = dumpfile;
+	}
+    else {
+	console.log("Checking file %s", program.file);
+	}
     var checkJson = checkHtmlFile(program.file, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
